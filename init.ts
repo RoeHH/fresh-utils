@@ -13,6 +13,7 @@ const options = await Prompt.prompts([
     },
   },
   { type: "confirm", name: "unoCSS", message: "Do you want to add a the unoCSS Plugin?", when: (a) => !a.new, defaultValue: "true"},
+  { type: "confirm", name: "kvAdmin", message: "Do you want to add a the deno KVAdmin Plugin?", defaultValue: "true"},
 ]);
 
 const additionalImportMapEntries: Array<string> = []
@@ -29,16 +30,32 @@ if(options.new){
   }
 }
 
-if(options.cssFw == "uno" || options.unoCSS == "true"){
-  const FRESH_CONFIG_TS = `import { defineConfig } from "$fresh/server.ts";\nimport UnoCSSPlugin from "@roeh/fresh/unocss";\n\nexport default defineConfig({ plugins: [UnoCSSPlugin] });`;
-  const CONFIG_TS_PATH = join(options.name || ".", "fresh.config.ts");
-  await Deno.writeTextFile(CONFIG_TS_PATH, FRESH_CONFIG_TS);
+// Fresh Config ts
+let FRESH_CONFIG_TS = `import { defineConfig } from "$fresh/server.ts";\n`
+const FRESH_CONFIG_PLUGINS = []
+
+if(options.cssFw == "uno" || options.unoCSS == true){
+  FRESH_CONFIG_TS += `import UnoCSSPlugin from "@roeh/fresh/unocss";\n`;
+  FRESH_CONFIG_PLUGINS.push("UnoCSSPlugin")
   additionalImportMapEntries.push("@roeh/fresh/unocss: https://fresh.roeh.ch/plugins/unocss.ts");
   additionalImportMapEntries.push("@unocss/core: https://esm.sh/@unocss/core@0.45.24");
   additionalImportMapEntries.push("@unocss/preset-wind: https://esm.sh/@unocss/preset-wind@0.45.24?bundle&no-check");
   additionalImportMapEntries.push("@unocss/preset-web-fonts: https://esm.sh/@unocss/preset-web-fonts?bundle&no-check");
   additionalImportMapEntries.push("@unocss/preset-icons: https://esm.sh/@unocss/preset-icons?bundle&no-check");
 }
+
+if(options.kvAdmin == true){
+  FRESH_CONFIG_TS += 'import KVAdminPlugin from "@roeh/fresh/kvAdmin";\n';
+  FRESH_CONFIG_PLUGINS.push("KVAdminPlugin")
+  additionalImportMapEntries.push("@roeh/fresh/kvAdmin: https://fresh.roeh.ch/plugins/kv-admin.ts");
+}
+
+FRESH_CONFIG_TS += `\nexport default defineConfig({ plugins: [${FRESH_CONFIG_PLUGINS.map(v=> ` ${v},`)} ] });`;
+const CONFIG_TS_PATH = join(options.name || ".", "fresh.config.ts");
+await Deno.writeTextFile(CONFIG_TS_PATH, FRESH_CONFIG_TS, {create:true});
+
+
+// Import Map Addons
 
 const DENO_JSON_PATH = join(options.name || ".", "deno.json");
 
